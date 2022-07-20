@@ -99,28 +99,24 @@ Summary_Table
 Sammry_table = combined_study_cleaned.groupby(["Drug Regimen"]).agg(["mean", "median", "var", "std","sem" ])["Tumor Volume (mm3)"]
 Sammry_table
 
-# Bar and Pie Charts #
+# Bar and Pie Charts#
 # Generate a bar plot showing the total number of timepoints for all mice tested for each drug regimen using Pandas.
 
-#filter the data frame to the comlumns of interst and set the index to the first Drug regimen
-DrugRegiment_SumTotalPoints = combined_study_cleaned.groupby(["Drug Regimen"]).count()["Timepoint"]
+#find the value count of drug regimens
+DrugRegiment_count = combined_study_cleaned["Drug Regimen"].value_counts()
 
-# sort the data from highest to lowest for better viewing 
-#DrugRegiment_SumTotalPoints_sorted = DrugRegiment_SumTotalPoints.sort_values(ascending = False)
 
-DrugRegiment_SumTotalPoints.plot(kind = "bar", figsize =(10,4), ylabel =" Number of Mice Tested")
+DrugRegiment_count.plot(kind = "bar", figsize =(10,4),xlabel = "Drug Regimen", ylabel =" Number of Mice Tested")
+plt.show()
 
 # Generate a bar plot showing the total number of timepoints for all mice tested for each drug regimen using pyplot.
-xAxis = combined_study_cleaned["Drug Regimen"].unique()
 
-Totalpoints_counts = DrugRegiment_SumTotalPoints
-ticks = []
-plt.bar(xAxis ,Totalpoints_counts, color = 'blue', alpha =1, align ='center')
+
+ 
+plt.bar(DrugRegiment_count.index.values ,DrugRegiment_count.values , color = 'blue', alpha =1, align ='center')
 plt.title(" Drug Regiment Vs. Number of Mice Tested")
 plt.xlabel("Drug Regimen")
 plt.ylabel("Number of Mice Tested")
-plt.xlim(-1, len(xAxis))
-
 plt.xticks(rotation ="vertical")
 plt.tight_layout()
 
@@ -133,7 +129,6 @@ male_Female_mice = combined_study_cleaned.groupby(["Sex"]).count()
 
 male_Female_mice.plot(kind ="pie", y= "Mouse ID" , autopct="%1.1f%%", title = "Sex", colors = ["red", "blue"], shadow = True, startangle = 140, legend =False)
 plt.ylabel("")
-
 
 # Generate a pie plot showing the distribution of female versus male mice using pyplot
 
@@ -160,10 +155,9 @@ plt.pie( sizes, explode = Explode, labels = Label, colors = Colors, autopct= "%1
 plt.axis("equal")
 plt.title("Sex")
 
-
 # Quartiles, Outliers and Boxplots #
 
- Calculate the final tumor volume of each mouse across four of the treatment regimens:  
+# Calculate the final tumor volume of each mouse across four of the treatment regimens:  
 # Capomulin, Ramicane, Infubinol, and Ceftamin
 
 # Start by getting the last (greatest) timepoint for each mouse
@@ -171,73 +165,51 @@ plt.title("Sex")
 
 # Merge this group df with the original dataframe to get the tumor volume at the last timepoint
 
-Final_tumor_volume_df =combined_study_cleaned.groupby("Mouse ID")["Tumor Volume (mm3)", "Timepoint"].max()
+Final_tumor_volume_df =combined_study_cleaned.groupby("Mouse ID")["Timepoint"].max()
+Final_tumor_volume_df = Final_tumor_volume_df.reset_index()
+Final_tumor_volume
 
-Final_tumor_volume_df
 
 # Merge this group df with the original dataframe to get the tumor volume at the last timepoint
 Max_data_merged = pd.merge(Final_tumor_volume_df,combined_study_cleaned, on=["Mouse ID","Timepoint"], how ="left")
-del Max_data_merged["Tumor Volume (mm3)_y"]
-Max_data_merged
-Max_data_merged_DF= Max_data_merged.rename(columns = {"Tumor Volume (mm3)_x": "Tumor Volume (mm3)"})
-Max_data_merged_DF
+Max_data_merged.head()
 
 # Calculate the final tumor volume of each mouse across four of the treatment regimens:  
 # Capomulin, Ramicane, Infubinol, and Ceftamin
+Treatment_list = ["Capomulin", "Ramicane", "Infubinol", "Ceftamin"]
 
-# filter the drugs using loc function
-Capomulin_filtered= Max_data_merged_DF.loc[Max_data_merged_DF["Drug Regimen"] == "Capomulin","Tumor Volume (mm3)"]
+# create empty list for the final tumor volume
 
-Ramicane_filtered =Max_data_merged_DF.loc[Max_data_merged_DF["Drug Regimen"] == "Ramicane","Tumor Volume (mm3)"]
+Tumor_volume = []
 
-Infubinol_filtered = Max_data_merged_DF.loc[Max_data_merged_DF["Drug Regimen"] == "Infubinol","Tumor Volume (mm3)"]
-
-Ceftamin_filtered = Max_data_merged_DF.loc[Max_data_merged_DF["Drug Regimen"] == "Ceftamin","Tumor Volume (mm3)"]
-
-
-Treatment_list = [Capomulin_filtered,Ramicane_filtered ,Infubinol_filtered,Ceftamin_filtered]
-UpperBound = []
-lowerBound = []
-finalvolume = []
+# filter the drugs regimen using loc function
 for treatment in Treatment_list:
-    quartiles = treatment.quantile([.25,.5,.75])
+    Final_Tumor_Volume = Max_data_merged.loc[Max_data_merged["Drug Regimen"]==treatment, "Tumor Volume (mm3)"]
+    
+    # add subset
+    
+    Tumor_volume.append(Final_Tumor_Volume)
+    
+    # Determine the outliers
+    
+    quartiles = Final_Tumor_Volume.quantile([.25,.5,.75])
     lowerq = quartiles[0.25]
     upperq = quartiles[0.75]
     iqr = upperq-lowerq
 
     lower_bound = lowerq - (1.5*iqr)
     upper_bound = upperq + (1.5*iqr)
- 
-    Finalvol = treatment.max()
     
-    finalvolume.append(Finalvol)
-    UpperBound.append(upper_bound)
-    lowerBound.append(lower_bound)
-
-
-
-          
-print(f"Capomulin final Tumor volume is{finalvolume[0]:.2f} The potential outlliers are higher than {UpperBound[0]:.2f} and lower than {lowerBound[0]:.2f}")
-
-print(f"Ramicane final Tumor volume is{finalvolume[1]:.2f} The potential outlliers are higher than  {UpperBound[1]:.2f} and lower than{lowerBound[1]:.2f}")
-print(f"Infubinol final Tumor volume is {finalvolume[2]:.2f} The potential outlliers are higher than{UpperBound[2]:.2f} and lower than{lowerBound[2]:.2f}")
-print(f"Ceftaminfinal Tumor volume is {finalvolume[3]:.2f} The potential outlliers are higher than{UpperBound[3]:.2f} and lower than{lowerBound[3]:.2f}")
-
+    Outliers =  Final_Tumor_Volume.loc[ (Final_Tumor_Volume > upper_bound)|(Final_Tumor_Volume < lower_bound)]
+ 
+   
+    print(f"{treatment}:\n The potential outlliers :\n {Outliers}\n")
 
 # Generate a box plot of the final tumor volume of each mouse across four regimens of interest
-
-Capomulin = Capomulin_filtered
-Ramicane = Ramicane_filtered
-Infubinol = Infubinol_filtered
-Ceftamin = Ceftamin_filtered
-
-data = [Capomulin,Ramicane, Infubinol, Ceftamin]
-
-fig1, ax1 = plt.subplots()
-ax1.set_title('Final Tumor Volume of Each Mouse Across Four Regimens of Interest')
-ax1.set_ylabel('Final Tumor Volume (mm3)')
-ax1.set_xticklabels(['Capomulin', 'Ramicane','Infubinol', 'Ceftamin'])
-ax1.boxplot(data)
+out = dict(markerfacecolor = "r", markersize = 10)
+plt.boxplot(Tumor_volume, labels= Treatment_list, flierprops=out)
+plt.xlabel("Drug Regimen")
+plt.ylabel("Final Tumor Volume (mm3)")
 plt.show()
 
 # Generate a line plot of tumor volume vs. time point for a mouse treated with Capomulin
@@ -263,8 +235,8 @@ aver_tumorVol_Wegiht.plot(kind ="scatter", x = "Weight (g)", y= "Tumor Volume (m
 
 Mouse_weight = aver_tumorVol_Wegiht["Weight (g)"]
 Ave_Tumor = aver_tumorVol_Wegiht["Tumor Volume (mm3)"]
-correlation =st.pearsonr(Mouse_weight,Ave_Tumor)
-print(f"The correlation between Mouse weight and average tumor size is {round(correlation[0])}")
+correlation = round(st.pearsonr(Mouse_weight,Ave_Tumor)[0],2)
+print(f"The correlation between Mouse weight and average tumor size is {correlation}")
 
 # Calculate the linear regression model 
 
@@ -282,4 +254,4 @@ print(f"The r-squared is: {rvalue**2}")
 plt.show()
 
 
-The end_Hassan
+The end_Hassan Mohamed
